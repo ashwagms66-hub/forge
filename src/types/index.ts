@@ -292,6 +292,25 @@ export interface ProjectAnalysis {
 }
 
 /**
+ * Analysis History Entry Type - Which analysis mode produced this entry
+ */
+export type AnalysisHistoryType = 'single' | 'zip' | 'github';
+
+/**
+ * Analysis History Entry - A saved record of one past analysis for a
+ * signed-in user (see src/history/store.ts - in-memory, not a database).
+ */
+export interface AnalysisHistoryEntry {
+  id: string;
+  type: AnalysisHistoryType;
+  label: string; // repo URL, ZIP file name, or component file name
+  createdAt: string; // ISO timestamp
+  score: number | null; // project health score or component quality score
+  grade: string | null;
+  summary: string;
+}
+
+/**
  * Parser Input - What we pass to the parser
  */
 export interface ParserInput {
