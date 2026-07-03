@@ -13,8 +13,9 @@ interface UploadedFile {
 }
 
 type UploadState = 'idle' | 'loading' | 'success' | 'error';
-type UploadMode = 'component' | 'project';
+type UploadMode = 'component' | 'project' | 'github';
 type ProjectScanState = 'idle' | 'scanning' | 'success' | 'error';
+type GithubScanState = 'idle' | 'scanning' | 'success' | 'error';
 
 export function UploadArea() {
   const [mode, setMode] = useState<UploadMode>('component');
@@ -33,6 +34,11 @@ export function UploadArea() {
   const [projectErrorMessage, setProjectErrorMessage] = useState<string | null>(null);
   const [projectAnalysis, setProjectAnalysis] = useState<ProjectAnalysis | null>(null);
   const projectFileInputRef = useRef<HTMLInputElement>(null);
+
+  const [githubUrl, setGithubUrl] = useState('');
+  const [githubScanState, setGithubScanState] = useState<GithubScanState>('idle');
+  const [githubErrorMessage, setGithubErrorMessage] = useState<string | null>(null);
+  const [githubAnalysis, setGithubAnalysis] = useState<ProjectAnalysis | null>(null);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -259,6 +265,40 @@ export function UploadArea() {
     }
   };
 
+  const handleScanGithub = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!githubUrl.trim()) {
+      setGithubErrorMessage('Please enter a GitHub repository URL');
+      setGithubScanState('error');
+      return;
+    }
+
+    setGithubScanState('scanning');
+    setGithubErrorMessage(null);
+    setGithubAnalysis(null);
+
+    try {
+      const response = await fetch('/api/scan-github', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoUrl: githubUrl.trim() }),
+      });
+
+      const body = await response.json();
+
+      if (!response.ok) {
+        throw new Error(body?.error || 'Failed to scan repository');
+      }
+
+      setGithubAnalysis(body as ProjectAnalysis);
+      setGithubScanState('success');
+    } catch (error) {
+      setGithubErrorMessage(error instanceof Error ? error.message : 'Failed to scan repository');
+      setGithubScanState('error');
+    }
+  };
+
   return (
     <div className="w-full space-y-6">
       {/* Mode Toggle */}
@@ -278,6 +318,14 @@ export function UploadArea() {
           }`}
         >
           Scan Full Project (ZIP)
+        </button>
+        <button
+          onClick={() => setMode('github')}
+          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            mode === 'github' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Public GitHub Repository
         </button>
       </div>
 
@@ -640,6 +688,110 @@ export function UploadArea() {
 
           {/* Project Scan Results */}
           {projectAnalysis && <ProjectResultsDisplay analysis={projectAnalysis} />}
+        </>
+      )}
+
+      {mode === 'github' && (
+        <>
+          {/* GitHub Repository Form */}
+          <div className="relative rounded-2xl border-2 border-dashed border-gray-700 bg-gray-900/30 p-12">
+            <div className="flex flex-col items-center gap-4">
+              {/* Icon */}
+              {githubScanState === 'scanning' ? (
+                <div className="flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 p-4">
+                  <div className="animate-spin">
+                    <svg
+                      className="h-8 w-8 text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              ) : githubScanState === 'error' ? (
+                <div className="flex items-center justify-center rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/20 p-4">
+                  <svg
+                    className="h-8 w-8 text-red-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 p-4">
+                  <svg
+                    className="h-8 w-8 text-blue-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                    />
+                  </svg>
+                </div>
+              )}
+
+              {/* Text */}
+              <div className="text-center">
+                {githubScanState === 'scanning' ? (
+                  <>
+                    <p className="text-lg font-semibold text-white">Scanning repository...</p>
+                    <p className="mt-1 text-sm text-gray-400">Please wait</p>
+                  </>
+                ) : githubScanState === 'error' ? (
+                  <>
+                    <p className="text-lg font-semibold text-red-400">Scan failed</p>
+                    <p className="mt-1 text-sm text-gray-400">{githubErrorMessage}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-lg font-semibold text-white">Analyze a public GitHub repository</p>
+                    <p className="mt-1 text-sm text-gray-400">Paste a repository URL to scan its source</p>
+                  </>
+                )}
+              </div>
+
+              {/* URL Form */}
+              <form onSubmit={handleScanGithub} className="flex w-full max-w-md gap-2">
+                <input
+                  type="text"
+                  value={githubUrl}
+                  onChange={(e) => setGithubUrl(e.target.value)}
+                  placeholder="https://github.com/owner/repo"
+                  disabled={githubScanState === 'scanning'}
+                  className="flex-1 rounded-lg border border-gray-700 bg-gray-900/50 px-4 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={githubScanState === 'scanning'}
+                  className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {githubScanState === 'scanning' ? 'Scanning...' : 'Scan Repository'}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Repository Scan Results */}
+          {githubAnalysis && <ProjectResultsDisplay analysis={githubAnalysis} />}
         </>
       )}
     </div>
