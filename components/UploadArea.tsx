@@ -1,8 +1,9 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import type { AnalysisResult } from '@/src/types';
+import type { AnalysisResult, ProjectAnalysis } from '@/src/types';
 import { ResultsDisplay } from './ResultsDisplay';
+import { ProjectResultsDisplay } from './ProjectResultsDisplay';
 
 interface UploadedFile {
   name: string;
@@ -12,8 +13,12 @@ interface UploadedFile {
 }
 
 type UploadState = 'idle' | 'loading' | 'success' | 'error';
+type UploadMode = 'component' | 'project';
+type ProjectScanState = 'idle' | 'scanning' | 'success' | 'error';
 
 export function UploadArea() {
+  const [mode, setMode] = useState<UploadMode>('component');
+
   const [isDragging, setIsDragging] = useState(false);
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
@@ -21,6 +26,13 @@ export function UploadArea() {
   const [analysisState, setAnalysisState] = useState<'idle' | 'analyzing'>('idle');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [isDraggingProject, setIsDraggingProject] = useState(false);
+  const [projectScanState, setProjectScanState] = useState<ProjectScanState>('idle');
+  const [projectFileName, setProjectFileName] = useState<string | null>(null);
+  const [projectErrorMessage, setProjectErrorMessage] = useState<string | null>(null);
+  const [projectAnalysis, setProjectAnalysis] = useState<ProjectAnalysis | null>(null);
+  const projectFileInputRef = useRef<HTMLInputElement>(null);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -168,8 +180,109 @@ export function UploadArea() {
     }
   };
 
+  const scanProject = async (file: File): Promise<void> => {
+    if (!file.name.endsWith('.zip')) {
+      setProjectErrorMessage('Only .zip files are supported');
+      setProjectScanState('error');
+      return;
+    }
+
+    setProjectFileName(file.name);
+    setProjectScanState('scanning');
+    setProjectErrorMessage(null);
+    setProjectAnalysis(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('project', file);
+
+      const response = await fetch('/api/scan-project', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const body = await response.json();
+
+      if (!response.ok) {
+        throw new Error(body?.error || 'Failed to scan project');
+      }
+
+      setProjectAnalysis(body as ProjectAnalysis);
+      setProjectScanState('success');
+    } catch (error) {
+      setProjectErrorMessage(error instanceof Error ? error.message : 'Failed to scan project');
+      setProjectScanState('error');
+    }
+  };
+
+  const handleProjectDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingProject(true);
+  };
+
+  const handleProjectDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingProject(false);
+  };
+
+  const handleProjectDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingProject(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      scanProject(files[0]);
+    }
+  };
+
+  const handleProjectFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      scanProject(files[0]);
+    }
+  };
+
+  const handleProjectClickUpload = () => {
+    projectFileInputRef.current?.click();
+  };
+
+  const handleProjectReset = () => {
+    setProjectScanState('idle');
+    setProjectFileName(null);
+    setProjectErrorMessage(null);
+    setProjectAnalysis(null);
+    if (projectFileInputRef.current) {
+      projectFileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="w-full space-y-6">
+      {/* Mode Toggle */}
+      <div className="flex w-fit gap-2 rounded-lg border border-gray-700 bg-gray-900/50 p-1">
+        <button
+          onClick={() => setMode('component')}
+          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            mode === 'component' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Analyze Single Component
+        </button>
+        <button
+          onClick={() => setMode('project')}
+          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            mode === 'project' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Scan Full Project (ZIP)
+        </button>
+      </div>
+
+      {mode === 'component' && (
+        <>
       {/* Upload Area */}
       {uploadState !== 'success' && (
         <div
@@ -362,6 +475,172 @@ export function UploadArea() {
       {/* Analysis Results */}
       {analysisResult && (
         <ResultsDisplay analysis={analysisResult} fileContent={uploadedFile?.content ?? ''} />
+      )}
+        </>
+      )}
+
+      {mode === 'project' && (
+        <>
+          {/* Project Upload Area */}
+          {projectScanState !== 'success' && (
+            <div
+              onDragOver={handleProjectDragOver}
+              onDragLeave={handleProjectDragLeave}
+              onDrop={handleProjectDrop}
+              className={`relative rounded-2xl border-2 border-dashed p-12 transition-all duration-300 ${
+                isDraggingProject
+                  ? 'border-blue-400/50 bg-blue-950/20'
+                  : 'border-gray-700 bg-gray-900/30 hover:border-gray-600 hover:bg-gray-900/50'
+              }`}
+            >
+              <input
+                ref={projectFileInputRef}
+                type="file"
+                accept=".zip"
+                onChange={handleProjectFileSelect}
+                className="hidden"
+              />
+
+              <div className="flex flex-col items-center gap-4">
+                {/* Icon */}
+                {projectScanState === 'scanning' ? (
+                  <div className="flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 p-4">
+                    <div className="animate-spin">
+                      <svg
+                        className="h-8 w-8 text-blue-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                ) : projectScanState === 'error' ? (
+                  <div className="flex items-center justify-center rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/20 p-4">
+                    <svg
+                      className="h-8 w-8 text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 p-4">
+                    <svg
+                      className="h-8 w-8 text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
+                      />
+                    </svg>
+                  </div>
+                )}
+
+                {/* Text */}
+                <div className="text-center">
+                  {projectScanState === 'scanning' ? (
+                    <>
+                      <p className="text-lg font-semibold text-white">Scanning project...</p>
+                      <p className="mt-1 text-sm text-gray-400">Please wait</p>
+                    </>
+                  ) : projectScanState === 'error' ? (
+                    <>
+                      <p className="text-lg font-semibold text-red-400">Scan failed</p>
+                      <p className="mt-1 text-sm text-gray-400">{projectErrorMessage}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg font-semibold text-white">Drag & drop your project ZIP</p>
+                      <p className="mt-1 text-sm text-gray-400">or click to browse</p>
+                      <p className="mt-2 text-xs text-gray-500">.zip files only</p>
+                    </>
+                  )}
+                </div>
+
+                {/* Button */}
+                {projectScanState !== 'scanning' && (
+                  <button
+                    onClick={handleProjectClickUpload}
+                    className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                  >
+                    {projectScanState === 'error' ? 'Try again' : 'Browse files'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Project Success State */}
+          {projectScanState === 'success' && projectFileName && (
+            <div className="rounded-2xl border border-green-500/30 bg-green-950/20 p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex items-center justify-center rounded-xl bg-green-500/20 p-3">
+                  <svg
+                    className="h-6 w-6 text-green-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+
+                <div className="flex-1">
+                  <h3 className="font-semibold text-green-400">Project scanned successfully</h3>
+                  <p className="mt-2 text-sm text-gray-300">
+                    <span className="text-gray-400">File:</span> {projectFileName}
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleProjectReset}
+                  className="text-gray-400 transition-colors hover:text-gray-300"
+                >
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Project Scan Results */}
+          {projectAnalysis && <ProjectResultsDisplay analysis={projectAnalysis} />}
+        </>
       )}
     </div>
   );
