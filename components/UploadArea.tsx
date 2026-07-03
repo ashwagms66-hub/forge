@@ -360,7 +360,9 @@ export function UploadArea() {
       )}
 
       {/* Analysis Results */}
-      {analysisResult && <ResultsDisplay analysis={analysisResult} />}
+      {analysisResult && (
+        <ResultsDisplay analysis={analysisResult} fileContent={uploadedFile?.content ?? ''} />
+      )}
     </div>
   );
 }

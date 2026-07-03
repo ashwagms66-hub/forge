@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { ReportGenerator } from '@/src/engine/reporter';
 import type { AnalysisResult, QualityColor, RefactorDraft, SuggestionSeverity } from '@/src/types';
 
 interface ResultsDisplayProps {
   analysis: AnalysisResult;
+  fileContent: string;
 }
 
 const scoreColorClasses: Record<QualityColor, { border: string; bg: string; text: string; badge: string }> = {
@@ -64,12 +64,38 @@ const severityColorClasses: Record<SuggestionSeverity, { border: string; bg: str
   },
 };
 
-export function ResultsDisplay({ analysis }: ResultsDisplayProps) {
+export function ResultsDisplay({ analysis, fileContent }: ResultsDisplayProps) {
   const { metrics, score, suggestions } = analysis;
   const [refactorDraft, setRefactorDraft] = useState<RefactorDraft | null>(null);
+  const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
 
-  const handleGenerateDraft = () => {
-    setRefactorDraft(ReportGenerator.generateRefactorDraft(metrics, suggestions ?? []));
+  const handleGenerateDraft = async () => {
+    setIsGeneratingDraft(true);
+    setDraftError(null);
+
+    try {
+      const response = await fetch('/api/refactor-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: metrics.fileName,
+          fileContent,
+        }),
+      });
+
+      const body = await response.json();
+
+      if (!response.ok) {
+        throw new Error(body?.error || 'Failed to generate refactor draft');
+      }
+
+      setRefactorDraft(body as RefactorDraft);
+    } catch (error) {
+      setDraftError(error instanceof Error ? error.message : 'Failed to generate refactor draft');
+    } finally {
+      setIsGeneratingDraft(false);
+    }
   };
 
   const metricItems = [
@@ -194,10 +220,19 @@ export function ResultsDisplay({ analysis }: ResultsDisplayProps) {
         <div className="mt-6">
           <button
             onClick={handleGenerateDraft}
-            className="rounded-lg bg-purple-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-purple-700"
+            disabled={isGeneratingDraft}
+            className="rounded-lg bg-purple-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
           >
-            Generate Refactor Draft
+            {isGeneratingDraft ? 'Generating...' : 'Generate Refactor Draft'}
           </button>
+        </div>
+      )}
+
+      {/* Refactor Draft Error */}
+      {draftError && (
+        <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-950/20 p-4">
+          <p className="text-sm font-semibold text-red-400">Failed to generate refactor draft</p>
+          <p className="mt-1 text-sm text-gray-300">{draftError}</p>
         </div>
       )}
 
