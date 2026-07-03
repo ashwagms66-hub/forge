@@ -1,6 +1,7 @@
 import { Header } from '@/components/Header';
 import { UploadArea } from '@/components/UploadArea';
 import { Features } from '@/components/Features';
+import { WaitlistSection } from '@/components/WaitlistSection';
 
 export default function Home() {
   return (
@@ -70,6 +71,9 @@ export default function Home() {
           </a>
         </div>
       </section>
+
+      {/* Waitlist Section */}
+      <WaitlistSection />
 
       {/* Footer */}
       <footer className="border-t border-gray-800 bg-black/80 px-4 py-8">
