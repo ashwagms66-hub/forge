@@ -397,17 +397,38 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
                 )}
 
                 {queueDrafts[item.fileName] && (
-                  <div className="mt-3 rounded-lg border border-purple-500/30 bg-purple-950/20 p-3">
-                    <p className="text-xs font-semibold text-purple-300">Refactor Draft</p>
-                    <p className="mt-1 text-xs text-gray-300">{queueDrafts[item.fileName].summary}</p>
+                  <div className="mt-3 space-y-3 rounded-xl border border-purple-500/30 bg-purple-950/20 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-bold text-purple-300">Refactor Draft Preview</p>
+                      <span className="shrink-0 rounded-full border border-purple-500/30 bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-300">
+                        Preview only — no files changed
+                      </span>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Draft Summary
+                      </p>
+                      <p className="mt-1 text-sm text-gray-200">{queueDrafts[item.fileName].summary}</p>
+                    </div>
+
                     {queueDrafts[item.fileName].steps.length > 0 && (
-                      <ol className="mt-2 list-inside list-decimal space-y-1 text-xs text-gray-300">
-                        {queueDrafts[item.fileName].steps.map((step, idx) => (
-                          <li key={idx}>{step}</li>
-                        ))}
-                      </ol>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Numbered Steps
+                        </p>
+                        <ol className="mt-1 list-inside list-decimal space-y-1 text-sm text-gray-200">
+                          {queueDrafts[item.fileName].steps.map((step, idx) => (
+                            <li key={idx}>{step}</li>
+                          ))}
+                        </ol>
+                      </div>
                     )}
-                    <p className="mt-2 text-xs italic text-purple-400">{queueDrafts[item.fileName].note}</p>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Notes</p>
+                      <p className="mt-1 text-xs italic text-purple-300">{queueDrafts[item.fileName].note}</p>
+                    </div>
                   </div>
                 )}
               </div>
