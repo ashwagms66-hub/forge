@@ -5,6 +5,7 @@
 
 import { ReactParser } from '@/src/engine/parser';
 import { ScoringEngine } from '@/src/engine/scorer';
+import { SuggestionsGenerator } from '@/src/engine/suggestions';
 import type { AnalysisResult, ParserInput } from '@/src/types';
 
 export class AnalysisEngine {
@@ -30,12 +31,16 @@ export class AnalysisEngine {
       // Score the component
       const score = ScoringEngine.score(metrics);
 
+      // Generate refactoring suggestions
+      const suggestions = SuggestionsGenerator.generate(metrics);
+
       // Create analysis result
       const result: AnalysisResult = {
         id: analysisId,
         status: 'success',
         metrics,
         score,
+        suggestions,
         startedAt: startTime,
         completedAt: new Date(),
       };

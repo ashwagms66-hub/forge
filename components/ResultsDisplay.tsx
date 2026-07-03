@@ -1,6 +1,6 @@
 'use client';
 
-import type { AnalysisResult, QualityColor } from '@/src/types';
+import type { AnalysisResult, QualityColor, SuggestionSeverity } from '@/src/types';
 
 interface ResultsDisplayProps {
   analysis: AnalysisResult;
@@ -39,8 +39,31 @@ const scoreColorClasses: Record<QualityColor, { border: string; bg: string; text
   },
 };
 
+const severityColorClasses: Record<SuggestionSeverity, { border: string; bg: string; badge: string }> = {
+  low: {
+    border: 'border-blue-500/20',
+    bg: 'bg-blue-950/10',
+    badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  },
+  medium: {
+    border: 'border-yellow-500/20',
+    bg: 'bg-yellow-950/10',
+    badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+  },
+  high: {
+    border: 'border-orange-500/20',
+    bg: 'bg-orange-950/10',
+    badge: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+  },
+  critical: {
+    border: 'border-red-500/20',
+    bg: 'bg-red-950/10',
+    badge: 'bg-red-500/20 text-red-300 border-red-500/30',
+  },
+};
+
 export function ResultsDisplay({ analysis }: ResultsDisplayProps) {
-  const { metrics, score } = analysis;
+  const { metrics, score, suggestions } = analysis;
 
   const metricItems = [
     {
@@ -133,6 +156,31 @@ export function ResultsDisplay({ analysis }: ResultsDisplayProps) {
           </div>
         ))}
       </div>
+
+      {/* Suggestions */}
+      {suggestions && suggestions.length > 0 && (
+        <div className="mt-8 rounded-xl border border-gray-700 bg-gray-900/50 p-4">
+          <p className="mb-3 text-sm font-semibold text-gray-300">Suggestions</p>
+          <div className="space-y-3">
+            {suggestions.map((suggestion) => (
+              <div
+                key={suggestion.id}
+                className={`rounded-lg border p-3 ${severityColorClasses[suggestion.severity].border} ${severityColorClasses[suggestion.severity].bg}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-white">{suggestion.title}</p>
+                  <span
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${severityColorClasses[suggestion.severity].badge}`}
+                  >
+                    {suggestion.severity}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-gray-400">{suggestion.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Hooks List */}
       {metrics.hookNames.length > 0 && (

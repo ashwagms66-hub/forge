@@ -53,16 +53,24 @@ export interface QualityScore {
 }
 
 /**
- * Suggestion - A single refactoring suggestion
- * (Not implemented yet - reserved for Phase 4)
+ * Suggestion Severity - How urgently a suggestion should be addressed
+ */
+export type SuggestionSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+/**
+ * Suggestion Category - Which aspect of the component a suggestion targets
+ */
+export type SuggestionCategory = 'structure' | 'complexity' | 'hooks' | 'effects' | 'props';
+
+/**
+ * Suggestion - A single rule-based refactoring suggestion
  */
 export interface Suggestion {
   id: string;
   title: string;
   description: string;
-  priority: 'low' | 'medium' | 'high';
-  category: string;
-  example?: string;
+  severity: SuggestionSeverity;
+  category: SuggestionCategory;
 }
 
 /**
@@ -80,7 +88,7 @@ export interface AnalysisResult {
   // Future: Will be populated in Phase 3
   score?: QualityScore;
 
-  // Future: Will be populated in Phase 4
+  // Rule-based refactoring suggestions
   suggestions?: Suggestion[];
 
   // Timing
