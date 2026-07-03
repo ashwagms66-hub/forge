@@ -71,6 +71,72 @@ const recommendationSeverityClasses: Record<
   },
 };
 
+/** A single dashboard section: a titled card wrapping its own content. */
+function DashboardSection({
+  title,
+  icon,
+  eyebrow,
+  accent = 'default',
+  children,
+}: {
+  title: string;
+  icon?: string;
+  eyebrow?: string;
+  accent?: 'default' | 'purple';
+  children: React.ReactNode;
+}) {
+  const accentClasses =
+    accent === 'purple'
+      ? 'border-purple-500/30 bg-purple-950/10'
+      : 'border-gray-700 bg-gray-900/40';
+
+  return (
+    <section className={`rounded-2xl border p-6 md:p-7 ${accentClasses}`}>
+      <div className="mb-5">
+        {eyebrow && (
+          <p
+            className={`mb-1 text-xs font-semibold uppercase tracking-wide ${
+              accent === 'purple' ? 'text-purple-400' : 'text-gray-500'
+            }`}
+          >
+            {eyebrow}
+          </p>
+        )}
+        <h3 className="flex items-center gap-2 text-xl font-bold text-white">
+          {icon && <span className="text-lg">{icon}</span>}
+          {title}
+        </h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function MetricTile({
+  label,
+  value,
+  subvalue,
+  icon,
+}: {
+  label: string;
+  value: string;
+  subvalue?: string;
+  icon: string;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-700 bg-gray-900/50 p-4 transition-all hover:border-blue-500/50 hover:bg-gray-900/80">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-gray-400">{label}</p>
+          <p className="mt-2 truncate text-2xl font-bold text-white">{value}</p>
+          {subvalue && <p className="mt-1 truncate text-xs text-gray-500">{subvalue}</p>}
+        </div>
+        <span className="shrink-0 text-xl">{icon}</span>
+      </div>
+    </div>
+  );
+}
+
 export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) {
   const [queueDraftState, setQueueDraftState] = useState<Record<string, QueueDraftState>>({});
   const [queueDrafts, setQueueDrafts] = useState<Record<string, RefactorDraft>>({});
@@ -110,88 +176,84 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
     }
   };
 
-  const metricItems = [
-    { label: 'Total Files', value: analysis.totalFiles.toString(), icon: '📁' },
-    { label: 'React Components', value: analysis.totalComponents.toString(), icon: '📦' },
-    { label: 'Total Hooks', value: analysis.totalHooks.toString(), icon: '🪝' },
-    { label: 'useEffect Calls', value: analysis.totalUseEffects.toString(), icon: '⚡' },
-    { label: 'Total Lines of Code', value: analysis.totalLinesOfCode.toString(), icon: '📝' },
-    { label: 'Average Component Size', value: `${analysis.averageComponentSize} LOC`, icon: '📊' },
-  ];
+  const generatedDrafts = Object.entries(queueDrafts);
+  const health = healthStatusClasses[analysis.projectHealth.status];
 
   return (
-    <div className="space-y-6 rounded-2xl border border-blue-500/30 bg-blue-950/20 p-8">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="mb-2">
-        <h2 className="text-2xl font-bold text-white">Project Scan Results</h2>
-        <p className="mt-2 text-sm text-gray-400">
+      <div>
+        <h2 className="text-2xl font-bold text-white">Project Dashboard</h2>
+        <p className="mt-1 text-sm text-gray-400">
           Scanned {analysis.totalFiles} file{analysis.totalFiles === 1 ? '' : 's'}
         </p>
       </div>
 
-      {/* Project Health */}
-      <div
-        className={`rounded-2xl border p-6 ${healthStatusClasses[analysis.projectHealth.status].border} ${
-          healthStatusClasses[analysis.projectHealth.status].bg
-        }`}
-      >
-        <div className="flex items-center gap-6">
-          <p className={`text-5xl font-bold ${healthStatusClasses[analysis.projectHealth.status].text}`}>
-            {analysis.projectHealth.overallScore}
-          </p>
-          <div>
-            <span
-              className={`inline-block rounded-full border px-3 py-1 text-sm font-semibold capitalize ${
-                healthStatusClasses[analysis.projectHealth.status].badge
-              }`}
-            >
-              Grade {analysis.projectHealth.grade} · {analysis.projectHealth.status}
-            </span>
-            <p className="mt-2 text-sm text-gray-300">{analysis.projectHealth.summary}</p>
-          </div>
-        </div>
-      </div>
+      {/* 1. Project Health (hero card) — the visual focus of the dashboard */}
+      <section className={`relative overflow-hidden rounded-3xl border p-8 md:p-10 ${health.border} ${health.bg}`}>
+        <div
+          className={`pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full blur-3xl ${health.bg} opacity-70`}
+        />
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {metricItems.map((item, idx) => (
-          <div
-            key={idx}
-            className="rounded-xl border border-gray-700 bg-gray-900/50 p-4 transition-all hover:border-blue-500/50 hover:bg-gray-900/80"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-400">{item.label}</p>
-                <p className="mt-2 text-2xl font-bold text-white">{item.value}</p>
-              </div>
-              <span className="text-xl">{item.icon}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+        <div className="relative">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Project Health</p>
 
-      {/* Largest Component */}
-      {analysis.largestComponent && (
-        <div className="rounded-xl border border-gray-700 bg-gray-900/50 p-4">
-          <p className="mb-3 text-sm font-semibold text-gray-300">Largest Component</p>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-lg font-bold text-white">{analysis.largestComponent.componentName}</p>
-              <p className="mt-1 font-mono text-xs text-gray-500">{analysis.largestComponent.fileName}</p>
-            </div>
-            <p className="shrink-0 text-2xl font-bold text-blue-400">
-              {analysis.largestComponent.linesOfCode} LOC
+          <div className="mt-3 flex flex-wrap items-center gap-6">
+            <p className={`text-7xl font-bold tracking-tight md:text-8xl ${health.text}`}>
+              {analysis.projectHealth.overallScore}
             </p>
+            <div className="min-w-0 flex-1">
+              <span
+                className={`inline-block rounded-full border px-3 py-1 text-sm font-semibold capitalize ${health.badge}`}
+              >
+                Grade {analysis.projectHealth.grade} · {analysis.projectHealth.status}
+              </span>
+              <p className="mt-3 max-w-xl text-base text-gray-300">{analysis.projectHealth.summary}</p>
+            </div>
+          </div>
+
+          <div className="mt-8 grid grid-cols-3 gap-4 border-t border-white/10 pt-6">
+            <div>
+              <p className="text-xs text-gray-400">Components</p>
+              <p className="mt-1 text-xl font-semibold text-white">{analysis.totalComponents}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Lines of Code</p>
+              <p className="mt-1 text-xl font-semibold text-white">{analysis.totalLinesOfCode}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Hooks</p>
+              <p className="mt-1 text-xl font-semibold text-white">{analysis.totalHooks}</p>
+            </div>
           </div>
         </div>
-      )}
+      </section>
 
-      {/* Architecture Insights */}
-      <div className="border-t border-gray-700 pt-6">
-        <h3 className="mb-4 text-xl font-bold text-white">Architecture Insights</h3>
+      {/* 2. Key Metrics */}
+      <DashboardSection title="Key Metrics" icon="📊">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <MetricTile label="Components" value={analysis.totalComponents.toString()} icon="📦" />
+          <MetricTile label="Lines of Code" value={analysis.totalLinesOfCode.toString()} icon="📝" />
+          <MetricTile label="Hooks" value={analysis.totalHooks.toString()} icon="🪝" />
+          <MetricTile
+            label="Largest Component"
+            value={analysis.largestComponent?.componentName ?? '—'}
+            subvalue={analysis.largestComponent ? `${analysis.largestComponent.linesOfCode} LOC` : undefined}
+            icon="🏆"
+          />
+          <MetricTile
+            label="Largest Folder"
+            value={analysis.largestFolder?.name ?? '—'}
+            subvalue={analysis.largestFolder ? `${analysis.largestFolder.totalLOC} LOC` : undefined}
+            icon="🗂️"
+          />
+        </div>
+      </DashboardSection>
 
-        <div className="space-y-4">
-          {/* Largest Folder */}
+      {/* 3. Architecture Insights */}
+      <DashboardSection title="Architecture Insights" icon="🏗️">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* Largest Folder detail */}
           {analysis.largestFolder && (
             <div className="rounded-xl border border-gray-700 bg-gray-900/50 p-4">
               <p className="mb-3 text-sm font-semibold text-gray-300">Largest Folder</p>
@@ -293,13 +355,12 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
             </div>
           )}
         </div>
-      </div>
+      </DashboardSection>
 
-      {/* Top Recommendations */}
+      {/* 4. Top Recommendations */}
       {analysis.recommendations.length > 0 && (
-        <div className="border-t border-gray-700 pt-6">
-          <h3 className="mb-4 text-xl font-bold text-white">Top Recommendations</h3>
-          <div className="space-y-3">
+        <DashboardSection title="Top Recommendations" icon="💡">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {analysis.recommendations.slice(0, 5).map((recommendation, idx) => (
               <div
                 key={idx}
@@ -319,9 +380,7 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
                 </div>
                 <p className="mt-1 text-xs text-gray-400">{recommendation.description}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                  {recommendation.fileName && (
-                    <span className="font-mono">{recommendation.fileName}</span>
-                  )}
+                  {recommendation.fileName && <span className="font-mono">{recommendation.fileName}</span>}
                   <span>
                     Impact: <span className="capitalize">{recommendation.estimatedImpact}</span>
                   </span>
@@ -329,14 +388,18 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
               </div>
             ))}
           </div>
-        </div>
+        </DashboardSection>
       )}
 
-      {/* Refactor Queue */}
+      {/* 5. Refactor Queue — the main action area of the dashboard */}
       {analysis.refactorQueue.length > 0 && (
-        <div className="border-t border-gray-700 pt-6">
-          <h3 className="mb-4 text-xl font-bold text-white">Refactor Queue</h3>
-          <div className="space-y-3">
+        <DashboardSection
+          title="Refactor Queue"
+          icon="🛠️"
+          eyebrow="Take action"
+          accent="purple"
+        >
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {analysis.refactorQueue.map((item) => (
               <div
                 key={item.fileName}
@@ -389,7 +452,9 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
                 >
                   {queueDraftState[item.fileName] === 'loading'
                     ? 'Generating...'
-                    : 'Generate AI Refactor Draft'}
+                    : queueDrafts[item.fileName]
+                      ? 'Regenerate AI Refactor Draft'
+                      : 'Generate AI Refactor Draft'}
                 </button>
 
                 {queueDraftState[item.fileName] === 'error' && (
@@ -397,45 +462,63 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
                 )}
 
                 {queueDrafts[item.fileName] && (
-                  <div className="mt-3 space-y-3 rounded-xl border border-purple-500/30 bg-purple-950/20 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-bold text-purple-300">Refactor Draft Preview</p>
-                      <span className="shrink-0 rounded-full border border-purple-500/30 bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-300">
-                        Preview only — no files changed
-                      </span>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        Draft Summary
-                      </p>
-                      <p className="mt-1 text-sm text-gray-200">{queueDrafts[item.fileName].summary}</p>
-                    </div>
-
-                    {queueDrafts[item.fileName].steps.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                          Numbered Steps
-                        </p>
-                        <ol className="mt-1 list-inside list-decimal space-y-1 text-sm text-gray-200">
-                          {queueDrafts[item.fileName].steps.map((step, idx) => (
-                            <li key={idx}>{step}</li>
-                          ))}
-                        </ol>
-                      </div>
-                    )}
-
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Notes</p>
-                      <p className="mt-1 text-xs italic text-purple-300">{queueDrafts[item.fileName].note}</p>
-                    </div>
-                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Draft ready — see it in the AI Draft Preview section below.
+                  </p>
                 )}
               </div>
             ))}
           </div>
-        </div>
+        </DashboardSection>
       )}
+
+      {/* 6. AI Draft Preview */}
+      <DashboardSection title="AI Draft Preview" icon="✨" accent="purple">
+        {generatedDrafts.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            Generate a draft from the Refactor Queue above to see a preview here.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {generatedDrafts.map(([fileName, draft]) => (
+              <div
+                key={fileName}
+                className="space-y-3 rounded-xl border border-purple-500/30 bg-purple-950/20 p-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="truncate font-mono text-xs text-purple-300">{fileName}</p>
+                  <span className="shrink-0 rounded-full border border-purple-500/30 bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-300">
+                    Preview only — no files changed
+                  </span>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Draft Summary</p>
+                  <p className="mt-1 text-sm text-gray-200">{draft.summary}</p>
+                </div>
+
+                {draft.steps.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Numbered Steps
+                    </p>
+                    <ol className="mt-1 list-inside list-decimal space-y-1 text-sm text-gray-200">
+                      {draft.steps.map((step, idx) => (
+                        <li key={idx}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Notes</p>
+                  <p className="mt-1 text-xs italic text-purple-300">{draft.note}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </DashboardSection>
     </div>
   );
 }

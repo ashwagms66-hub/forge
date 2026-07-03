@@ -27,11 +27,11 @@ export default function Home() {
 
           {/* Hero Title & Subtitle */}
           <div className="mb-12 text-center">
-            <h1 className="mb-6 bg-gradient-to-r from-blue-200 via-blue-400 to-cyan-400 bg-clip-text text-5xl font-bold text-transparent md:text-7xl">
-              Your AI Refactoring Engineer
+            <h1 className="mb-6 bg-gradient-to-r from-blue-200 via-blue-400 to-cyan-400 bg-clip-text text-6xl font-bold tracking-tight text-transparent md:text-8xl">
+              Forge
             </h1>
             <p className="mx-auto max-w-2xl text-lg text-gray-400 md:text-xl">
-              Analyze React code, measure quality, and generate production-ready refactoring suggestions.
+              Your AI engineering partner for understanding, scoring, and refactoring React codebases.
             </p>
           </div>
 
@@ -62,9 +62,12 @@ export default function Home() {
           <p className="mb-8 text-gray-400">
             Start analyzing your React components today. It's fast, free, and secure.
           </p>
-          <button className="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 px-8 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-blue-500/30">
-            Upload Your Component
-          </button>
+          <a
+            href="#upload"
+            className="inline-block rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 px-8 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-blue-500/30"
+          >
+            Analyze Codebase
+          </a>
         </div>
       </section>
 

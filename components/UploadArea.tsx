@@ -302,30 +302,42 @@ export function UploadArea() {
   return (
     <div className="w-full space-y-6">
       {/* Mode Toggle */}
-      <div className="flex w-fit gap-2 rounded-lg border border-gray-700 bg-gray-900/50 p-1">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <button
           onClick={() => setMode('component')}
-          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-            mode === 'component' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+          className={`rounded-xl border p-4 text-left transition-all ${
+            mode === 'component'
+              ? 'border-blue-500 bg-blue-950/30 shadow-lg shadow-blue-500/10'
+              : 'border-gray-700 bg-gray-900/40 hover:border-gray-600 hover:bg-gray-900/60'
           }`}
         >
-          Analyze Single Component
+          <span className="text-xl">🧩</span>
+          <p className="mt-2 text-sm font-semibold text-white">Single Component</p>
+          <p className="mt-1 text-xs text-gray-400">Analyze one .tsx or .ts file</p>
         </button>
         <button
           onClick={() => setMode('project')}
-          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-            mode === 'project' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+          className={`rounded-xl border p-4 text-left transition-all ${
+            mode === 'project'
+              ? 'border-blue-500 bg-blue-950/30 shadow-lg shadow-blue-500/10'
+              : 'border-gray-700 bg-gray-900/40 hover:border-gray-600 hover:bg-gray-900/60'
           }`}
         >
-          Scan Full Project (ZIP)
+          <span className="text-xl">📦</span>
+          <p className="mt-2 text-sm font-semibold text-white">ZIP Project</p>
+          <p className="mt-1 text-xs text-gray-400">Upload a full project archive</p>
         </button>
         <button
           onClick={() => setMode('github')}
-          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-            mode === 'github' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+          className={`rounded-xl border p-4 text-left transition-all ${
+            mode === 'github'
+              ? 'border-blue-500 bg-blue-950/30 shadow-lg shadow-blue-500/10'
+              : 'border-gray-700 bg-gray-900/40 hover:border-gray-600 hover:bg-gray-900/60'
           }`}
         >
-          Public GitHub Repository
+          <span className="text-xl">🌐</span>
+          <p className="mt-2 text-sm font-semibold text-white">GitHub Repository</p>
+          <p className="mt-1 text-xs text-gray-400">Scan a public repo by URL</p>
         </button>
       </div>
 
