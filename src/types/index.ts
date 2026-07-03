@@ -108,6 +108,29 @@ export interface RefactorDraft {
 }
 
 /**
+ * Largest Component - The single biggest component found in a project scan
+ */
+export interface LargestComponent {
+  fileName: string;
+  componentName: string;
+  linesOfCode: number;
+}
+
+/**
+ * Project Analysis - Aggregate metrics across an entire scanned project
+ * (Sprint 11 foundation - raw counts only, no quality scoring yet)
+ */
+export interface ProjectAnalysis {
+  totalFiles: number;
+  totalComponents: number;
+  totalHooks: number;
+  totalUseEffects: number;
+  totalLinesOfCode: number;
+  largestComponent: LargestComponent | null;
+  averageComponentSize: number;
+}
+
+/**
  * Parser Input - What we pass to the parser
  */
 export interface ParserInput {
