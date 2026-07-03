@@ -98,6 +98,16 @@ export interface AnalysisResult {
 }
 
 /**
+ * Refactor Draft - A locally generated plan summarizing suggested refactors
+ * (Placeholder only - no code generation yet, AI integration comes next)
+ */
+export interface RefactorDraft {
+  summary: string;
+  steps: string[];
+  note: string;
+}
+
+/**
  * Parser Input - What we pass to the parser
  */
 export interface ParserInput {

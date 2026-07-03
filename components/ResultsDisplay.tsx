@@ -1,6 +1,8 @@
 'use client';
 
-import type { AnalysisResult, QualityColor, SuggestionSeverity } from '@/src/types';
+import { useState } from 'react';
+import { ReportGenerator } from '@/src/engine/reporter';
+import type { AnalysisResult, QualityColor, RefactorDraft, SuggestionSeverity } from '@/src/types';
 
 interface ResultsDisplayProps {
   analysis: AnalysisResult;
@@ -64,6 +66,11 @@ const severityColorClasses: Record<SuggestionSeverity, { border: string; bg: str
 
 export function ResultsDisplay({ analysis }: ResultsDisplayProps) {
   const { metrics, score, suggestions } = analysis;
+  const [refactorDraft, setRefactorDraft] = useState<RefactorDraft | null>(null);
+
+  const handleGenerateDraft = () => {
+    setRefactorDraft(ReportGenerator.generateRefactorDraft(metrics, suggestions ?? []));
+  };
 
   const metricItems = [
     {
@@ -179,6 +186,36 @@ export function ResultsDisplay({ analysis }: ResultsDisplayProps) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Generate Refactor Draft */}
+      {suggestions && suggestions.length > 0 && (
+        <div className="mt-6">
+          <button
+            onClick={handleGenerateDraft}
+            className="rounded-lg bg-purple-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-purple-700"
+          >
+            Generate Refactor Draft
+          </button>
+        </div>
+      )}
+
+      {/* Refactor Draft Panel */}
+      {refactorDraft && (
+        <div className="mt-6 rounded-2xl border border-purple-500/30 bg-purple-950/20 p-6">
+          <h3 className="text-lg font-bold text-purple-300">Refactor Draft</h3>
+          <p className="mt-2 text-sm text-gray-300">{refactorDraft.summary}</p>
+
+          {refactorDraft.steps.length > 0 && (
+            <ol className="mt-4 list-inside list-decimal space-y-2 text-sm text-gray-300">
+              {refactorDraft.steps.map((step, idx) => (
+                <li key={idx}>{step}</li>
+              ))}
+            </ol>
+          )}
+
+          <p className="mt-4 text-xs italic text-purple-400">{refactorDraft.note}</p>
         </div>
       )}
 
