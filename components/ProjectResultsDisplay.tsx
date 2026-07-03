@@ -59,6 +59,115 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
           </div>
         </div>
       )}
+
+      {/* Architecture Insights */}
+      <div className="border-t border-gray-700 pt-6">
+        <h3 className="mb-4 text-xl font-bold text-white">Architecture Insights</h3>
+
+        <div className="space-y-4">
+          {/* Largest Folder */}
+          {analysis.largestFolder && (
+            <div className="rounded-xl border border-gray-700 bg-gray-900/50 p-4">
+              <p className="mb-3 text-sm font-semibold text-gray-300">Largest Folder</p>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-mono text-lg font-bold text-white">{analysis.largestFolder.name}</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {analysis.largestFolder.totalFiles} file
+                    {analysis.largestFolder.totalFiles === 1 ? '' : 's'} ·{' '}
+                    {analysis.largestFolder.components} component
+                    {analysis.largestFolder.components === 1 ? '' : 's'}
+                  </p>
+                </div>
+                <p className="shrink-0 text-2xl font-bold text-blue-400">
+                  {analysis.largestFolder.totalLOC} LOC
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Folder Breakdown */}
+          {analysis.folders.length > 0 && (
+            <div className="rounded-xl border border-gray-700 bg-gray-900/50 p-4">
+              <p className="mb-3 text-sm font-semibold text-gray-300">Folder Breakdown</p>
+              <div className="space-y-2">
+                {analysis.folders.map((folder, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-4 rounded-lg border border-gray-700 bg-gray-900/70 px-3 py-2"
+                  >
+                    <p className="truncate font-mono text-sm text-gray-300">{folder.name}</p>
+                    <p className="shrink-0 text-xs text-gray-500">
+                      {folder.totalFiles} file{folder.totalFiles === 1 ? '' : 's'} · {folder.components}{' '}
+                      component{folder.components === 1 ? '' : 's'} · {folder.totalLOC} LOC
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Large Components */}
+          {analysis.largeComponents.length > 0 && (
+            <div className="rounded-xl border border-gray-700 bg-gray-900/50 p-4">
+              <p className="mb-3 text-sm font-semibold text-gray-300">Large Components (&gt;150 LOC)</p>
+              <div className="space-y-2">
+                {analysis.largeComponents.map((component, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-4 rounded-lg border border-orange-500/20 bg-orange-950/10 px-3 py-2"
+                  >
+                    <p className="truncate font-mono text-sm text-gray-300">{component.name}</p>
+                    <span className="shrink-0 rounded-full border border-orange-500/30 bg-orange-500/20 px-2 py-0.5 text-xs font-medium text-orange-300">
+                      {component.loc} LOC
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Hook Heavy Components */}
+          {analysis.hookHeavyComponents.length > 0 && (
+            <div className="rounded-xl border border-gray-700 bg-gray-900/50 p-4">
+              <p className="mb-3 text-sm font-semibold text-gray-300">Hook Heavy Components (&gt;5 hooks)</p>
+              <div className="space-y-2">
+                {analysis.hookHeavyComponents.map((component, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-4 rounded-lg border border-yellow-500/20 bg-yellow-950/10 px-3 py-2"
+                  >
+                    <p className="truncate font-mono text-sm text-gray-300">{component.name}</p>
+                    <span className="shrink-0 rounded-full border border-yellow-500/30 bg-yellow-500/20 px-2 py-0.5 text-xs font-medium text-yellow-300">
+                      {component.hooks} hooks
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Deep JSX Components */}
+          {analysis.deepJsxComponents.length > 0 && (
+            <div className="rounded-xl border border-gray-700 bg-gray-900/50 p-4">
+              <p className="mb-3 text-sm font-semibold text-gray-300">Deep JSX Components (&gt;4 depth)</p>
+              <div className="space-y-2">
+                {analysis.deepJsxComponents.map((component, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-4 rounded-lg border border-red-500/20 bg-red-950/10 px-3 py-2"
+                  >
+                    <p className="truncate font-mono text-sm text-gray-300">{component.name}</p>
+                    <span className="shrink-0 rounded-full border border-red-500/30 bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-300">
+                      depth {component.jsxDepth}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

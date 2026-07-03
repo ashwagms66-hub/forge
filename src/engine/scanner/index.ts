@@ -1,15 +1,28 @@
 /**
- * Project Scanner - Sprint 11 foundation
+ * Project Scanner
  * Extracts .ts/.tsx files from an uploaded project ZIP and aggregates raw
- * metrics across the whole project. No quality scoring yet.
+ * metrics and architecture insights across the whole project. No quality
+ * scoring yet.
  */
 
 import JSZip from 'jszip';
 import { ReactParser } from '@/src/engine/parser';
-import type { LargestComponent, ProjectAnalysis } from '@/src/types';
+import type {
+  DeepJsxComponentSummary,
+  FolderSummary,
+  HookHeavyComponentSummary,
+  LargeComponentSummary,
+  LargestComponent,
+  ProjectAnalysis,
+} from '@/src/types';
 
 const IGNORED_DIRECTORIES = ['node_modules', 'dist', 'build', '.next', 'coverage'];
 const SOURCE_FILE_PATTERN = /\.tsx?$/;
+
+// Architecture insight thresholds - mirrors the suggestion engine's rules
+const LARGE_COMPONENT_LOC_THRESHOLD = 150;
+const HOOK_HEAVY_THRESHOLD = 5;
+const DEEP_JSX_THRESHOLD = 4;
 
 export interface ProjectFile {
   fileName: string;
@@ -48,10 +61,16 @@ export class ProjectScanner {
     return segments.some((segment) => IGNORED_DIRECTORIES.includes(segment));
   }
 
+  private static folderOf(fileName: string): string {
+    const lastSlash = fileName.lastIndexOf('/');
+    return lastSlash === -1 ? '.' : fileName.slice(0, lastSlash);
+  }
+
   /**
-   * Parse every file and aggregate project-wide metrics. A file counts as
-   * a "component" when it's a .tsx file (the only extension that can
-   * legally contain JSX) with a resolvable exported component name.
+   * Parse every file and aggregate project-wide metrics and architecture
+   * insights. A file counts as a "component" when it's a .tsx file (the
+   * only extension that can legally contain JSX) with a resolvable
+   * exported component name.
    */
   static analyzeProject(files: ProjectFile[]): ProjectAnalysis {
     let totalHooks = 0;
@@ -60,6 +79,11 @@ export class ProjectScanner {
     let totalComponents = 0;
     let componentLinesOfCodeSum = 0;
     let largestComponent: LargestComponent | null = null;
+
+    const folderMap = new Map<string, FolderSummary>();
+    const largeComponents: LargeComponentSummary[] = [];
+    const hookHeavyComponents: HookHeavyComponentSummary[] = [];
+    const deepJsxComponents: DeepJsxComponentSummary[] = [];
 
     for (const file of files) {
       let metrics;
@@ -74,6 +98,17 @@ export class ProjectScanner {
       totalUseEffects += metrics.numberOfUseEffects;
       totalLinesOfCode += metrics.linesOfCode;
 
+      const folderName = this.folderOf(file.fileName);
+      const folder = folderMap.get(folderName) ?? {
+        name: folderName,
+        totalFiles: 0,
+        components: 0,
+        totalLOC: 0,
+      };
+      folder.totalFiles++;
+      folder.totalLOC += metrics.linesOfCode;
+      folderMap.set(folderName, folder);
+
       const isComponent = file.fileName.endsWith('.tsx') && metrics.componentName !== 'Unknown';
       if (!isComponent) {
         continue;
@@ -81,6 +116,7 @@ export class ProjectScanner {
 
       totalComponents++;
       componentLinesOfCodeSum += metrics.linesOfCode;
+      folder.components++;
 
       if (!largestComponent || metrics.linesOfCode > largestComponent.linesOfCode) {
         largestComponent = {
@@ -89,10 +125,27 @@ export class ProjectScanner {
           linesOfCode: metrics.linesOfCode,
         };
       }
+
+      if (metrics.linesOfCode > LARGE_COMPONENT_LOC_THRESHOLD) {
+        largeComponents.push({ name: file.fileName, loc: metrics.linesOfCode });
+      }
+      if (metrics.numberOfHooks > HOOK_HEAVY_THRESHOLD) {
+        hookHeavyComponents.push({ name: file.fileName, hooks: metrics.numberOfHooks });
+      }
+      if (metrics.jsxNestingDepth > DEEP_JSX_THRESHOLD) {
+        deepJsxComponents.push({ name: file.fileName, jsxDepth: metrics.jsxNestingDepth });
+      }
     }
 
     const averageComponentSize =
       totalComponents > 0 ? Math.round(componentLinesOfCodeSum / totalComponents) : 0;
+
+    const folders = Array.from(folderMap.values()).sort((a, b) => b.totalLOC - a.totalLOC);
+    const largestFolder = folders.length > 0 ? folders[0] : null;
+
+    largeComponents.sort((a, b) => b.loc - a.loc);
+    hookHeavyComponents.sort((a, b) => b.hooks - a.hooks);
+    deepJsxComponents.sort((a, b) => b.jsxDepth - a.jsxDepth);
 
     return {
       totalFiles: files.length,
@@ -102,6 +155,11 @@ export class ProjectScanner {
       totalLinesOfCode,
       largestComponent,
       averageComponentSize,
+      folders,
+      largestFolder,
+      largeComponents,
+      hookHeavyComponents,
+      deepJsxComponents,
     };
   }
 }

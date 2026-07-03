@@ -117,8 +117,42 @@ export interface LargestComponent {
 }
 
 /**
- * Project Analysis - Aggregate metrics across an entire scanned project
- * (Sprint 11 foundation - raw counts only, no quality scoring yet)
+ * Folder Summary - Aggregate metrics for a single folder in a project scan
+ */
+export interface FolderSummary {
+  name: string;
+  totalFiles: number;
+  components: number;
+  totalLOC: number;
+}
+
+/**
+ * Large Component - A component flagged for exceeding the LOC guideline
+ */
+export interface LargeComponentSummary {
+  name: string;
+  loc: number;
+}
+
+/**
+ * Hook Heavy Component - A component flagged for exceeding the hooks guideline
+ */
+export interface HookHeavyComponentSummary {
+  name: string;
+  hooks: number;
+}
+
+/**
+ * Deep JSX Component - A component flagged for exceeding the JSX nesting guideline
+ */
+export interface DeepJsxComponentSummary {
+  name: string;
+  jsxDepth: number;
+}
+
+/**
+ * Project Analysis - Aggregate metrics and architecture insights across an
+ * entire scanned project. No quality scoring yet.
  */
 export interface ProjectAnalysis {
   totalFiles: number;
@@ -128,6 +162,13 @@ export interface ProjectAnalysis {
   totalLinesOfCode: number;
   largestComponent: LargestComponent | null;
   averageComponentSize: number;
+
+  // Architecture insights (Sprint 13)
+  folders: FolderSummary[];
+  largestFolder: FolderSummary | null;
+  largeComponents: LargeComponentSummary[];
+  hookHeavyComponents: HookHeavyComponentSummary[];
+  deepJsxComponents: DeepJsxComponentSummary[];
 }
 
 /**
