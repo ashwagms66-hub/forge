@@ -1,10 +1,66 @@
 'use client';
 
-import type { ProjectAnalysis } from '@/src/types';
+import type { ProjectAnalysis, ProjectHealthStatus, RecommendationSeverity } from '@/src/types';
 
 interface ProjectResultsDisplayProps {
   analysis: ProjectAnalysis;
 }
+
+const healthStatusClasses: Record<
+  ProjectHealthStatus,
+  { border: string; bg: string; text: string; badge: string }
+> = {
+  excellent: {
+    border: 'border-green-500/30',
+    bg: 'bg-green-950/20',
+    text: 'text-green-400',
+    badge: 'bg-green-500/20 text-green-300 border-green-500/30',
+  },
+  good: {
+    border: 'border-blue-500/30',
+    bg: 'bg-blue-950/20',
+    text: 'text-blue-400',
+    badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  },
+  warning: {
+    border: 'border-yellow-500/30',
+    bg: 'bg-yellow-950/20',
+    text: 'text-yellow-400',
+    badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+  },
+  critical: {
+    border: 'border-red-500/30',
+    bg: 'bg-red-950/20',
+    text: 'text-red-400',
+    badge: 'bg-red-500/20 text-red-300 border-red-500/30',
+  },
+};
+
+const recommendationSeverityClasses: Record<
+  RecommendationSeverity,
+  { border: string; bg: string; badge: string }
+> = {
+  low: {
+    border: 'border-blue-500/20',
+    bg: 'bg-blue-950/10',
+    badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  },
+  medium: {
+    border: 'border-yellow-500/20',
+    bg: 'bg-yellow-950/10',
+    badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+  },
+  high: {
+    border: 'border-orange-500/20',
+    bg: 'bg-orange-950/10',
+    badge: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+  },
+  critical: {
+    border: 'border-red-500/20',
+    bg: 'bg-red-950/10',
+    badge: 'bg-red-500/20 text-red-300 border-red-500/30',
+  },
+};
 
 export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) {
   const metricItems = [
@@ -24,6 +80,29 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
         <p className="mt-2 text-sm text-gray-400">
           Scanned {analysis.totalFiles} file{analysis.totalFiles === 1 ? '' : 's'}
         </p>
+      </div>
+
+      {/* Project Health */}
+      <div
+        className={`rounded-2xl border p-6 ${healthStatusClasses[analysis.projectHealth.status].border} ${
+          healthStatusClasses[analysis.projectHealth.status].bg
+        }`}
+      >
+        <div className="flex items-center gap-6">
+          <p className={`text-5xl font-bold ${healthStatusClasses[analysis.projectHealth.status].text}`}>
+            {analysis.projectHealth.overallScore}
+          </p>
+          <div>
+            <span
+              className={`inline-block rounded-full border px-3 py-1 text-sm font-semibold capitalize ${
+                healthStatusClasses[analysis.projectHealth.status].badge
+              }`}
+            >
+              Grade {analysis.projectHealth.grade} · {analysis.projectHealth.status}
+            </span>
+            <p className="mt-2 text-sm text-gray-300">{analysis.projectHealth.summary}</p>
+          </div>
+        </div>
       </div>
 
       {/* Metrics Grid */}
@@ -168,6 +247,105 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
           )}
         </div>
       </div>
+
+      {/* Top Recommendations */}
+      {analysis.recommendations.length > 0 && (
+        <div className="border-t border-gray-700 pt-6">
+          <h3 className="mb-4 text-xl font-bold text-white">Top Recommendations</h3>
+          <div className="space-y-3">
+            {analysis.recommendations.slice(0, 5).map((recommendation, idx) => (
+              <div
+                key={idx}
+                className={`rounded-lg border p-3 ${recommendationSeverityClasses[recommendation.severity].border} ${
+                  recommendationSeverityClasses[recommendation.severity].bg
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-white">{recommendation.title}</p>
+                  <span
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${
+                      recommendationSeverityClasses[recommendation.severity].badge
+                    }`}
+                  >
+                    {recommendation.severity}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-gray-400">{recommendation.description}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                  {recommendation.fileName && (
+                    <span className="font-mono">{recommendation.fileName}</span>
+                  )}
+                  <span>
+                    Impact: <span className="capitalize">{recommendation.estimatedImpact}</span>
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Refactor Queue */}
+      {analysis.refactorQueue.length > 0 && (
+        <div className="border-t border-gray-700 pt-6">
+          <h3 className="mb-4 text-xl font-bold text-white">Refactor Queue</h3>
+          <div className="space-y-3">
+            {analysis.refactorQueue.map((item) => (
+              <div
+                key={item.fileName}
+                className={`rounded-lg border p-4 ${recommendationSeverityClasses[item.severity].border} ${
+                  recommendationSeverityClasses[item.severity].bg
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-800 text-xs font-bold text-gray-300">
+                      {item.rank}
+                    </span>
+                    <div>
+                      <p className="font-mono text-sm font-semibold text-white">{item.fileName}</p>
+                      <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-gray-400">
+                        {item.reasons.map((reason, idx) => (
+                          <li key={idx}>{reason}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${
+                      recommendationSeverityClasses[item.severity].badge
+                    }`}
+                  >
+                    {item.severity}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                  <span>
+                    Est. Score: <span className="font-semibold text-gray-300">{item.currentScoreEstimate}</span>
+                  </span>
+                  <span>
+                    Est. Time: <span className="font-semibold text-gray-300">{item.estimatedTime}</span>
+                  </span>
+                  <span>
+                    Impact:{' '}
+                    <span className="font-semibold capitalize text-gray-300">
+                      {item.estimatedProjectImpact}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            disabled
+            className="mt-4 w-full cursor-not-allowed rounded-lg border border-gray-700 bg-gray-900/50 px-6 py-3 text-sm font-semibold text-gray-500"
+          >
+            AI Refactor coming next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -151,8 +151,76 @@ export interface DeepJsxComponentSummary {
 }
 
 /**
- * Project Analysis - Aggregate metrics and architecture insights across an
- * entire scanned project. No quality scoring yet.
+ * Project Health Grade - Letter grade derived from the overall project health score
+ */
+export type ProjectHealthGrade = 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
+
+/**
+ * Project Health Status - Coarse severity bucket for the overall project health score
+ */
+export type ProjectHealthStatus = 'excellent' | 'good' | 'warning' | 'critical';
+
+/**
+ * Project Health - Aggregate health score derived purely from existing
+ * project scan metrics (no AI, no new parsing)
+ */
+export interface ProjectHealth {
+  overallScore: number; // 0-100
+  grade: ProjectHealthGrade;
+  status: ProjectHealthStatus;
+  summary: string;
+}
+
+/**
+ * Recommendation Severity - How urgently a project-level recommendation should be addressed
+ */
+export type RecommendationSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+/**
+ * Recommendation Impact - Estimated payoff of acting on a recommendation
+ */
+export type RecommendationImpact = 'low' | 'medium' | 'high';
+
+/**
+ * Recommendation - A single prioritized, project-level recommendation
+ */
+export interface Recommendation {
+  title: string;
+  description: string;
+  severity: RecommendationSeverity;
+  fileName?: string;
+  reason: string;
+  estimatedImpact: RecommendationImpact;
+}
+
+/**
+ * Refactor Queue Severity - How urgently a queued file should be refactored
+ */
+export type RefactorQueueSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+/**
+ * Refactor Queue Impact - Estimated project-wide payoff of refactoring this file
+ */
+export type RefactorQueueImpact = 'low' | 'medium' | 'high';
+
+/**
+ * Refactor Queue Item - A single prioritized file in the project's refactor queue
+ * (Placeholder ranking/estimates only - no AI, no code generation yet)
+ */
+export interface RefactorQueueItem {
+  rank: number;
+  fileName: string;
+  currentScoreEstimate: number; // 0-100, from the existing per-component scorer
+  estimatedProjectImpact: RefactorQueueImpact;
+  estimatedTime: string;
+  reasons: string[];
+  severity: RefactorQueueSeverity;
+}
+
+/**
+ * Project Analysis - Aggregate metrics, architecture insights, health
+ * score, prioritized recommendations, and a refactor queue across an
+ * entire scanned project.
  */
 export interface ProjectAnalysis {
   totalFiles: number;
@@ -169,6 +237,13 @@ export interface ProjectAnalysis {
   largeComponents: LargeComponentSummary[];
   hookHeavyComponents: HookHeavyComponentSummary[];
   deepJsxComponents: DeepJsxComponentSummary[];
+
+  // Project health & recommendations (Sprint 15)
+  projectHealth: ProjectHealth;
+  recommendations: Recommendation[];
+
+  // Prioritized refactor queue (Sprint 16)
+  refactorQueue: RefactorQueueItem[];
 }
 
 /**

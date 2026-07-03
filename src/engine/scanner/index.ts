@@ -7,7 +7,10 @@
 
 import JSZip from 'jszip';
 import { ReactParser } from '@/src/engine/parser';
+import { ProjectHealthAnalyzer } from '@/src/engine/scanner/health';
+import { RefactorQueueBuilder } from '@/src/engine/scanner/refactorQueue';
 import type {
+  ComponentMetrics,
   DeepJsxComponentSummary,
   FolderSummary,
   HookHeavyComponentSummary,
@@ -84,6 +87,7 @@ export class ProjectScanner {
     const largeComponents: LargeComponentSummary[] = [];
     const hookHeavyComponents: HookHeavyComponentSummary[] = [];
     const deepJsxComponents: DeepJsxComponentSummary[] = [];
+    const componentMetricsByFile = new Map<string, ComponentMetrics>();
 
     for (const file of files) {
       let metrics;
@@ -117,6 +121,7 @@ export class ProjectScanner {
       totalComponents++;
       componentLinesOfCodeSum += metrics.linesOfCode;
       folder.components++;
+      componentMetricsByFile.set(file.fileName, metrics);
 
       if (!largestComponent || metrics.linesOfCode > largestComponent.linesOfCode) {
         largestComponent = {
@@ -147,6 +152,17 @@ export class ProjectScanner {
     hookHeavyComponents.sort((a, b) => b.hooks - a.hooks);
     deepJsxComponents.sort((a, b) => b.jsxDepth - a.jsxDepth);
 
+    const healthInput = { largestComponent, folders, largeComponents, hookHeavyComponents, deepJsxComponents };
+    const projectHealth = ProjectHealthAnalyzer.calculateHealth(healthInput);
+    const recommendations = ProjectHealthAnalyzer.generateRecommendations(healthInput);
+
+    const refactorQueue = RefactorQueueBuilder.build({
+      largeComponents,
+      hookHeavyComponents,
+      deepJsxComponents,
+      componentMetricsByFile,
+    });
+
     return {
       totalFiles: files.length,
       totalComponents,
@@ -160,6 +176,9 @@ export class ProjectScanner {
       largeComponents,
       hookHeavyComponents,
       deepJsxComponents,
+      projectHealth,
+      recommendations,
+      refactorQueue,
     };
   }
 }
