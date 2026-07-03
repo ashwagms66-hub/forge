@@ -98,13 +98,52 @@ export interface AnalysisResult {
 }
 
 /**
- * Refactor Draft - A locally generated plan summarizing suggested refactors
- * (Placeholder only - no code generation yet, AI integration comes next)
+ * Refactor Risk Level - How risky it would be to apply a refactor draft
+ */
+export type RefactorRiskLevel = 'safe' | 'low' | 'medium' | 'high';
+
+/**
+ * Refactor Explanation - Why one part of a refactor draft was made
+ */
+export interface RefactorExplanation {
+  change: string;
+  why: string;
+  problemSolved: string;
+  complexityImprovement: string;
+  readabilityImprovement: string;
+  performanceImpact: string;
+}
+
+/**
+ * Refactor Draft - A structured refactor plan for a file, generated either
+ * by the local rule-based reporter or by the OpenAI-backed provider, always
+ * derived from the file's real source code (see RefactorResult.originalCode).
+ *
+ * `improvedCode` and everything else here is a preview only - Forge never
+ * writes files or applies diffs on its own.
  */
 export interface RefactorDraft {
   summary: string;
-  steps: string[];
+  problemsFound: string[];
+  refactoringStrategy: string[];
+  improvedCode: string;
+  expectedBenefits: string[];
+  confidenceScore: number; // 0-100
+  confidenceReasoning: string;
+  riskLevel: RefactorRiskLevel;
+  riskReasoning: string;
+  explanations: RefactorExplanation[];
   note: string;
+}
+
+/**
+ * Refactor Result - A RefactorDraft plus the original source it was derived
+ * from, as returned by the refactor-queue-item API (enough to render a
+ * side-by-side comparison, a diff, and a downloadable patch).
+ */
+export interface RefactorResult extends RefactorDraft {
+  fileName: string;
+  originalCode: string;
 }
 
 /**
@@ -204,8 +243,9 @@ export type RefactorQueueSeverity = 'low' | 'medium' | 'high' | 'critical';
 export type RefactorQueueImpact = 'low' | 'medium' | 'high';
 
 /**
- * Refactor Queue Item - A single prioritized file in the project's refactor queue
- * (Placeholder ranking/estimates only - no AI, no code generation yet)
+ * Refactor Queue Item - A single prioritized file in the project's refactor queue.
+ * Ranking/estimates are rule-based; each item can trigger AI refactor draft
+ * generation (see RefactorDraft) via the "Generate AI Refactor Draft" action.
  */
 export interface RefactorQueueItem {
   rank: number;
@@ -223,6 +263,11 @@ export interface RefactorQueueItem {
  * entire scanned project.
  */
 export interface ProjectAnalysis {
+  // Identifies this scan's server-side source cache, so the Refactor Queue
+  // can request AI drafts derived from the real scanned file contents.
+  // Added by the scan API routes, not by ProjectScanner itself.
+  scanId?: string;
+
   totalFiles: number;
   totalComponents: number;
   totalHooks: number;

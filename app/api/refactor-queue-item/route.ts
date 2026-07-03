@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
+import { ReactParser } from '@/src/engine/parser';
+import { SuggestionsGenerator } from '@/src/engine/suggestions';
 import { getRefactorProvider } from '@/src/ai/provider';
-import type { ComponentMetrics, RecommendationImpact, Suggestion, SuggestionCategory } from '@/src/types';
+import { getScanFileContent } from '@/src/engine/scanner/sourceCache';
+import type { RefactorResult } from '@/src/types';
 
 interface RefactorQueueItemRequest {
+  scanId: string;
   fileName: string;
-  reasons: string[];
-  currentScoreEstimate: number;
-  estimatedProjectImpact: RecommendationImpact;
-  estimatedTime: string;
 }
-
-const VALID_IMPACTS: RecommendationImpact[] = ['low', 'medium', 'high'];
 
 function isValidRequest(body: unknown): body is RefactorQueueItemRequest {
   if (!body || typeof body !== 'object') {
@@ -19,64 +17,11 @@ function isValidRequest(body: unknown): body is RefactorQueueItemRequest {
   const candidate = body as Record<string, unknown>;
 
   return (
+    typeof candidate.scanId === 'string' &&
+    candidate.scanId.trim() !== '' &&
     typeof candidate.fileName === 'string' &&
-    candidate.fileName.trim() !== '' &&
-    Array.isArray(candidate.reasons) &&
-    candidate.reasons.every((reason) => typeof reason === 'string') &&
-    typeof candidate.currentScoreEstimate === 'number' &&
-    typeof candidate.estimatedProjectImpact === 'string' &&
-    VALID_IMPACTS.includes(candidate.estimatedProjectImpact as RecommendationImpact) &&
-    typeof candidate.estimatedTime === 'string'
+    candidate.fileName.trim() !== ''
   );
-}
-
-function deriveComponentName(fileName: string): string {
-  const base = fileName.split('/').pop() ?? fileName;
-  return base.replace(/\.tsx?$/, '') || 'Unknown';
-}
-
-function guessCategory(reason: string): SuggestionCategory {
-  const lower = reason.toLowerCase();
-  if (lower.includes('hook')) return 'hooks';
-  if (lower.includes('effect')) return 'effects';
-  if (lower.includes('prop')) return 'props';
-  if (lower.includes('jsx') || lower.includes('nest')) return 'complexity';
-  return 'structure';
-}
-
-/**
- * The refactor queue only carries lightweight per-file metadata (no
- * source, no full ComponentMetrics) - this adapts that metadata into the
- * shape the existing RefactorAI interface expects, without changing the
- * interface, the provider abstraction, or the parser.
- */
-function buildProviderInput(body: RefactorQueueItemRequest): {
-  metrics: ComponentMetrics;
-  suggestions: Suggestion[];
-} {
-  const metrics: ComponentMetrics = {
-    componentName: deriveComponentName(body.fileName),
-    fileName: body.fileName,
-    linesOfCode: 0,
-    totalLines: 0,
-    numberOfProps: 0,
-    numberOfHooks: 0,
-    numberOfUseEffects: 0,
-    numberOfFunctions: 0,
-    jsxNestingDepth: 0,
-    hookNames: [],
-    analyzedAt: new Date(),
-  };
-
-  const suggestions: Suggestion[] = body.reasons.map((reason, idx) => ({
-    id: `refactor-queue-${idx}`,
-    title: reason,
-    description: `${reason} (estimated current score: ${body.currentScoreEstimate}, estimated time: ${body.estimatedTime})`,
-    severity: body.estimatedProjectImpact,
-    category: guessCategory(reason),
-  }));
-
-  return { metrics, suggestions };
 }
 
 export async function POST(request: Request) {
@@ -90,20 +35,41 @@ export async function POST(request: Request) {
 
   if (!isValidRequest(body)) {
     return NextResponse.json(
-      {
-        error:
-          'Request must include fileName (string), reasons (string[]), currentScoreEstimate (number), estimatedProjectImpact ("low"|"medium"|"high"), and estimatedTime (string)',
-      },
+      { error: 'Request must include scanId (string) and fileName (string)' },
       { status: 400 }
     );
   }
 
-  try {
-    const { metrics, suggestions } = buildProviderInput(body);
-    const provider = getRefactorProvider();
-    const draft = await provider.generateRefactorDraft(body.fileName, '', metrics, suggestions);
+  // Real source, never file path or statistics alone: looked up from the
+  // scan's server-side source cache (see src/engine/scanner/sourceCache.ts).
+  const fileContent = getScanFileContent(body.scanId, body.fileName);
 
-    return NextResponse.json(draft);
+  if (fileContent === undefined) {
+    return NextResponse.json(
+      {
+        error:
+          'Original source for this file was not found (the scan may have expired). Please re-scan the project and try again.',
+      },
+      { status: 404 }
+    );
+  }
+
+  try {
+    // Real metrics and suggestions from the actual file, not synthetic
+    // placeholders - the parser and suggestions engine are unchanged.
+    const metrics = ReactParser.parse(body.fileName, fileContent);
+    const suggestions = SuggestionsGenerator.generate(metrics);
+
+    const provider = getRefactorProvider();
+    const draft = await provider.generateRefactorDraft(body.fileName, fileContent, metrics, suggestions);
+
+    const result: RefactorResult = {
+      ...draft,
+      fileName: body.fileName,
+      originalCode: fileContent,
+    };
+
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to generate refactor draft' },

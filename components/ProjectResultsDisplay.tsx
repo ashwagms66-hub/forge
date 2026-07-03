@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { RefactorDraftPreview } from './RefactorDraftPreview';
 import type {
   ProjectAnalysis,
   ProjectHealthStatus,
   RecommendationSeverity,
-  RefactorDraft,
   RefactorQueueItem,
+  RefactorResult,
 } from '@/src/types';
 
 interface ProjectResultsDisplayProps {
@@ -139,7 +140,7 @@ function MetricTile({
 
 export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) {
   const [queueDraftState, setQueueDraftState] = useState<Record<string, QueueDraftState>>({});
-  const [queueDrafts, setQueueDrafts] = useState<Record<string, RefactorDraft>>({});
+  const [queueDrafts, setQueueDrafts] = useState<Record<string, RefactorResult>>({});
   const [queueErrors, setQueueErrors] = useState<Record<string, string>>({});
 
   const handleGenerateQueueDraft = async (item: RefactorQueueItem) => {
@@ -151,11 +152,8 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          scanId: analysis.scanId,
           fileName: item.fileName,
-          reasons: item.reasons,
-          currentScoreEstimate: item.currentScoreEstimate,
-          estimatedProjectImpact: item.estimatedProjectImpact,
-          estimatedTime: item.estimatedTime,
         }),
       });
 
@@ -165,7 +163,7 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
         throw new Error(body?.error || 'Failed to generate refactor draft');
       }
 
-      setQueueDrafts((prev) => ({ ...prev, [item.fileName]: body as RefactorDraft }));
+      setQueueDrafts((prev) => ({ ...prev, [item.fileName]: body as RefactorResult }));
       setQueueDraftState((prev) => ({ ...prev, [item.fileName]: 'success' }));
     } catch (error) {
       setQueueErrors((prev) => ({
@@ -479,42 +477,9 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
             Generate a draft from the Refactor Queue above to see a preview here.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {generatedDrafts.map(([fileName, draft]) => (
-              <div
-                key={fileName}
-                className="space-y-3 rounded-xl border border-purple-500/30 bg-purple-950/20 p-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="truncate font-mono text-xs text-purple-300">{fileName}</p>
-                  <span className="shrink-0 rounded-full border border-purple-500/30 bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-300">
-                    Preview only — no files changed
-                  </span>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Draft Summary</p>
-                  <p className="mt-1 text-sm text-gray-200">{draft.summary}</p>
-                </div>
-
-                {draft.steps.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Numbered Steps
-                    </p>
-                    <ol className="mt-1 list-inside list-decimal space-y-1 text-sm text-gray-200">
-                      {draft.steps.map((step, idx) => (
-                        <li key={idx}>{step}</li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Notes</p>
-                  <p className="mt-1 text-xs italic text-purple-300">{draft.note}</p>
-                </div>
-              </div>
+          <div className="space-y-4">
+            {generatedDrafts.map(([fileName, result]) => (
+              <RefactorDraftPreview key={fileName} fileName={fileName} result={result} />
             ))}
           </div>
         )}

@@ -24,3 +24,41 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Prism.js token colors for the Refactor Draft Preview code viewer,
+   tuned to Forge's dark blue/cyan/purple palette instead of a stock theme. */
+.forge-code {
+  color: #d1d5db;
+}
+.forge-code .token.comment,
+.forge-code .token.prolog,
+.forge-code .token.doctype,
+.forge-code .token.cdata {
+  color: #6b7280;
+  font-style: italic;
+}
+.forge-code .token.string,
+.forge-code .token.attr-value {
+  color: #7dd3fc;
+}
+.forge-code .token.number,
+.forge-code .token.boolean,
+.forge-code .token.constant {
+  color: #f0abfc;
+}
+.forge-code .token.keyword,
+.forge-code .token.operator,
+.forge-code .token.tag {
+  color: #60a5fa;
+}
+.forge-code .token.function,
+.forge-code .token.class-name {
+  color: #c4b5fd;
+}
+.forge-code .token.attr-name,
+.forge-code .token.property {
+  color: #67e8f9;
+}
+.forge-code .token.punctuation {
+  color: #9ca3af;
+}

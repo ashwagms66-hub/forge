@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ProjectScanner } from '@/src/engine/scanner';
 import { GitHubRepositoryFetcher } from '@/src/engine/scanner/github';
+import { createScanId, storeScanFiles } from '@/src/engine/scanner/sourceCache';
 
 export async function POST(request: Request) {
   let body: { repoUrl?: unknown };
@@ -40,7 +41,10 @@ export async function POST(request: Request) {
 
     const analysis = ProjectScanner.analyzeProject(projectFiles);
 
-    return NextResponse.json(analysis);
+    const scanId = createScanId();
+    storeScanFiles(scanId, projectFiles);
+
+    return NextResponse.json({ ...analysis, scanId });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to scan repository';
     const status = /not found|private/i.test(message) ? 404 : 502;

@@ -242,9 +242,9 @@ export function ResultsDisplay({ analysis, fileContent }: ResultsDisplayProps) {
           <h3 className="text-lg font-bold text-purple-300">Refactor Draft</h3>
           <p className="mt-2 text-sm text-gray-300">{refactorDraft.summary}</p>
 
-          {refactorDraft.steps.length > 0 && (
+          {refactorDraft.refactoringStrategy.length > 0 && (
             <ol className="mt-4 list-inside list-decimal space-y-2 text-sm text-gray-300">
-              {refactorDraft.steps.map((step, idx) => (
+              {refactorDraft.refactoringStrategy.map((step, idx) => (
                 <li key={idx}>{step}</li>
               ))}
             </ol>
