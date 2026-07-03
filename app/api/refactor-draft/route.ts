@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { AnalysisEngine } from '@/src/engine/analyzer';
-import { ReportGenerator } from '@/src/engine/reporter';
+import { getRefactorProvider } from '@/src/ai/provider';
 import type { ParserInput } from '@/src/types';
 
 export async function POST(request: Request) {
@@ -29,7 +29,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const refactorDraft = ReportGenerator.generateRefactorDraft(result.metrics, result.suggestions ?? []);
+    const provider = getRefactorProvider();
+    const refactorDraft = await provider.generateRefactorDraft(
+      input.fileName,
+      input.fileContent,
+      result.metrics,
+      result.suggestions ?? []
+    );
 
     return NextResponse.json(refactorDraft);
   } catch (error) {
