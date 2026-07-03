@@ -1,10 +1,19 @@
 'use client';
 
-import type { ProjectAnalysis, ProjectHealthStatus, RecommendationSeverity } from '@/src/types';
+import { useState } from 'react';
+import type {
+  ProjectAnalysis,
+  ProjectHealthStatus,
+  RecommendationSeverity,
+  RefactorDraft,
+  RefactorQueueItem,
+} from '@/src/types';
 
 interface ProjectResultsDisplayProps {
   analysis: ProjectAnalysis;
 }
+
+type QueueDraftState = 'idle' | 'loading' | 'success' | 'error';
 
 const healthStatusClasses: Record<
   ProjectHealthStatus,
@@ -63,6 +72,44 @@ const recommendationSeverityClasses: Record<
 };
 
 export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) {
+  const [queueDraftState, setQueueDraftState] = useState<Record<string, QueueDraftState>>({});
+  const [queueDrafts, setQueueDrafts] = useState<Record<string, RefactorDraft>>({});
+  const [queueErrors, setQueueErrors] = useState<Record<string, string>>({});
+
+  const handleGenerateQueueDraft = async (item: RefactorQueueItem) => {
+    setQueueDraftState((prev) => ({ ...prev, [item.fileName]: 'loading' }));
+    setQueueErrors((prev) => ({ ...prev, [item.fileName]: '' }));
+
+    try {
+      const response = await fetch('/api/refactor-queue-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: item.fileName,
+          reasons: item.reasons,
+          currentScoreEstimate: item.currentScoreEstimate,
+          estimatedProjectImpact: item.estimatedProjectImpact,
+          estimatedTime: item.estimatedTime,
+        }),
+      });
+
+      const body = await response.json();
+
+      if (!response.ok) {
+        throw new Error(body?.error || 'Failed to generate refactor draft');
+      }
+
+      setQueueDrafts((prev) => ({ ...prev, [item.fileName]: body as RefactorDraft }));
+      setQueueDraftState((prev) => ({ ...prev, [item.fileName]: 'success' }));
+    } catch (error) {
+      setQueueErrors((prev) => ({
+        ...prev,
+        [item.fileName]: error instanceof Error ? error.message : 'Failed to generate refactor draft',
+      }));
+      setQueueDraftState((prev) => ({ ...prev, [item.fileName]: 'error' }));
+    }
+  };
+
   const metricItems = [
     { label: 'Total Files', value: analysis.totalFiles.toString(), icon: '📁' },
     { label: 'React Components', value: analysis.totalComponents.toString(), icon: '📦' },
@@ -334,16 +381,38 @@ export function ProjectResultsDisplay({ analysis }: ProjectResultsDisplayProps) 
                     </span>
                   </span>
                 </div>
+
+                <button
+                  onClick={() => handleGenerateQueueDraft(item)}
+                  disabled={queueDraftState[item.fileName] === 'loading'}
+                  className="mt-3 w-full rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {queueDraftState[item.fileName] === 'loading'
+                    ? 'Generating...'
+                    : 'Generate AI Refactor Draft'}
+                </button>
+
+                {queueDraftState[item.fileName] === 'error' && (
+                  <p className="mt-2 text-xs text-red-400">{queueErrors[item.fileName]}</p>
+                )}
+
+                {queueDrafts[item.fileName] && (
+                  <div className="mt-3 rounded-lg border border-purple-500/30 bg-purple-950/20 p-3">
+                    <p className="text-xs font-semibold text-purple-300">Refactor Draft</p>
+                    <p className="mt-1 text-xs text-gray-300">{queueDrafts[item.fileName].summary}</p>
+                    {queueDrafts[item.fileName].steps.length > 0 && (
+                      <ol className="mt-2 list-inside list-decimal space-y-1 text-xs text-gray-300">
+                        {queueDrafts[item.fileName].steps.map((step, idx) => (
+                          <li key={idx}>{step}</li>
+                        ))}
+                      </ol>
+                    )}
+                    <p className="mt-2 text-xs italic text-purple-400">{queueDrafts[item.fileName].note}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
-
-          <button
-            disabled
-            className="mt-4 w-full cursor-not-allowed rounded-lg border border-gray-700 bg-gray-900/50 px-6 py-3 text-sm font-semibold text-gray-500"
-          >
-            AI Refactor coming next
-          </button>
         </div>
       )}
     </div>
